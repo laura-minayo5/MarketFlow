@@ -1,0 +1,309 @@
+Table customers {
+  customer_id bigint [pk]
+  first_name varchar
+  last_name varchar
+  email varchar
+  phone_number varchar
+  date_of_birth date
+  gender varchar
+  signup_date timestamp
+  status varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table customer_addresses {
+  address_id bigint [pk]
+  customer_id bigint
+  address_type varchar
+  street varchar
+  city varchar
+  county varchar
+  country varchar
+  postal_code varchar
+  is_default boolean
+  created_at timestamp
+}
+
+Table sellers {
+  seller_id bigint [pk]
+  seller_name varchar
+  email varchar
+  phone_number varchar
+  region varchar
+  country varchar
+  seller_rating decimal
+  joined_date timestamp
+  status varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table products {
+  product_id bigint [pk]
+  product_name varchar
+  brand varchar
+  description text
+  weight decimal
+  dimensions varchar
+  image_url varchar
+  product_url varchar
+  average_rating decimal
+  review_count int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table categories {
+  category_id bigint [pk]
+  parent_category_id bigint
+  category_name varchar
+  created_at timestamp
+}
+
+Table product_categories {
+  product_id bigint
+  category_id bigint
+
+  indexes {
+    (product_id, category_id) [pk]
+  }
+}
+
+Table seller_products {
+  seller_product_id bigint [pk]
+  seller_id bigint
+  product_id bigint
+  selling_price decimal
+  discount_price decimal
+  currency varchar
+  active_flag boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table shopping_carts {
+  cart_id bigint [pk]
+  customer_id bigint [unique]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table cart_items {
+  cart_item_id bigint [pk]
+  cart_id bigint
+  seller_product_id bigint
+  quantity int
+  added_at timestamp
+}
+
+Table wishlists {
+  wishlist_id bigint [pk]
+  customer_id bigint [unique]
+  created_at timestamp
+}
+
+Table wishlist_items {
+  wishlist_item_id bigint [pk]
+  wishlist_id bigint
+  seller_product_id bigint
+  added_at timestamp
+}
+
+Table orders {
+  order_id bigint [pk]
+  customer_id bigint
+  order_date timestamp
+  order_status_id int
+  subtotal_amount decimal
+  shipping_amount decimal
+  tax_amount decimal
+  discount_amount decimal
+  total_amount decimal
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table order_items {
+  order_item_id bigint [pk]
+  order_id bigint
+  seller_product_id bigint
+  quantity int
+  unit_price decimal
+  discount_amount decimal
+  line_total decimal
+  created_at timestamp
+}
+
+Table payments {
+  payment_id bigint [pk]
+  order_id bigint
+  payment_method_id int
+  payment_status_id int
+  amount decimal
+  payment_date timestamp
+  transaction_reference varchar
+  created_at timestamp
+}
+
+Table shipments {
+  shipment_id bigint [pk]
+  order_id bigint
+  carrier varchar
+  tracking_number varchar
+  shipment_status_id int
+  ship_date timestamp
+  estimated_delivery_date timestamp
+  actual_delivery_date timestamp
+  created_at timestamp
+}
+
+Table tracking_events {
+  tracking_event_id bigint [pk]
+  shipment_id bigint
+  event_type varchar
+  event_timestamp timestamp
+  location varchar
+  description varchar
+  created_at timestamp
+}
+
+Table returns {
+  return_id bigint [pk]
+  order_item_id bigint
+  quantity_returned int
+  refund_amount decimal
+  return_reason_id int
+  return_status_id int
+  return_date timestamp
+  created_at timestamp
+}
+
+Table reviews {
+  review_id bigint [pk]
+  customer_id bigint
+  product_id bigint
+  rating int
+  review_text text
+  review_date timestamp
+  created_at timestamp
+}
+
+
+
+Table coupons {
+  coupon_id bigint [pk]
+  coupon_code varchar
+  discount_type varchar
+  discount_value decimal
+  start_date timestamp
+  end_date timestamp
+  usage_limit int
+  status varchar
+  created_at timestamp
+}
+
+Table order_coupons {
+  order_coupon_id bigint [pk]
+  order_id bigint
+  coupon_id bigint
+  discount_amount decimal
+  created_at timestamp
+}
+
+Table inventory_movements {
+  movement_id bigint [pk]
+  seller_product_id bigint
+  movement_type_id int
+  quantity int
+  reference_type varchar
+  reference_id bigint
+  movement_timestamp timestamp
+  created_at timestamp
+}
+
+Table payment_methods {
+  payment_method_id int [pk]
+  method_name varchar
+}
+
+Table payment_statuses {
+  payment_status_id int [pk]
+  status_name varchar
+}
+
+Table order_statuses {
+  order_status_id int [pk]
+  status_name varchar
+}
+
+Table shipment_statuses {
+  shipment_status_id int [pk]
+  status_name varchar
+}
+
+Table return_statuses {
+  return_status_id int [pk]
+  status_name varchar
+}
+
+Table return_reasons {
+  return_reason_id int [pk]
+  reason_name varchar
+  description varchar
+  created_at timestamp
+}
+
+Table movement_types {
+  movement_type_id int [pk]
+  movement_name varchar
+}
+
+Ref: customer_addresses.customer_id > customers.customer_id
+
+Ref: shopping_carts.customer_id > customers.customer_id
+Ref: cart_items.cart_id > shopping_carts.cart_id
+Ref: cart_items.seller_product_id > seller_products.seller_product_id
+
+Ref: wishlists.customer_id > customers.customer_id
+Ref: wishlist_items.wishlist_id > wishlists.wishlist_id
+Ref: wishlist_items.seller_product_id > seller_products.seller_product_id
+
+Ref: orders.customer_id > customers.customer_id
+Ref: order_items.order_id > orders.order_id
+Ref: order_items.seller_product_id > seller_products.seller_product_id
+
+Ref: payments.order_id > orders.order_id
+
+Ref: shipments.order_id > orders.order_id
+Ref: tracking_events.shipment_id > shipments.shipment_id
+
+Ref: returns.order_item_id > order_items.order_item_id
+
+Ref: reviews.customer_id > customers.customer_id
+Ref: reviews.product_id > products.product_id
+
+Ref: product_categories.product_id > products.product_id
+Ref: product_categories.category_id > categories.category_id
+
+Ref: seller_products.product_id > products.product_id
+Ref: seller_products.seller_id > sellers.seller_id
+
+Ref: inventory_movements.seller_product_id > seller_products.seller_product_id
+
+Ref: order_coupons.order_id > orders.order_id
+Ref: order_coupons.coupon_id > coupons.coupon_id
+
+Ref: categories.parent_category_id > categories.category_id
+
+Ref: orders.order_status_id > order_statuses.order_status_id
+
+Ref: payments.payment_method_id > payment_methods.payment_method_id
+Ref: payments.payment_status_id > payment_statuses.payment_status_id
+
+Ref: shipments.shipment_status_id > shipment_statuses.shipment_status_id
+
+Ref: returns.return_status_id > return_statuses.return_status_id
+Ref: returns.return_reason_id > return_reasons.return_reason_id
+
+Ref: inventory_movements.movement_type_id > movement_types.movement_type_id
