@@ -52,8 +52,8 @@ CREATE TABLE shopping_carts (
 CREATE TABLE cart_items (
     cart_item_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     cart_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
-    quantity INT NOT NULL CHECK (quantity > 0),
+    seller_product_id BIGINT NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
     added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_cart_items_cart
@@ -75,7 +75,7 @@ CREATE TABLE wishlists (
 CREATE TABLE wishlist_items (
     wishlist_item_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     wishlist_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
+    seller_product_id BIGINT NOT NULL,
     added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_wishlist_items_wishlist
