@@ -5,6 +5,7 @@ from .category_crawler import crawl_categories
 from .product_parser import extract_product_urls
 from .product_crawler import crawl_products
 from .product_details_parser import parse_product_details
+from itertools import islice
 
 
 def main():
@@ -39,17 +40,26 @@ def main():
 
          # Extract product names and relative URLs from the category page using BeautifulSoup. (product_parser.py)
         products = extract_product_urls(category_url)
+        # products = dict(list(products.items())[:5]) # for testing so that we only download 5 products
 
         print(f"Found {len(products)} products")
 
         # Download each product page.
-        for product_name, product_html in crawl_products(products):
+        # Download first 5 items in generator for testing
+        for product_name, product_html in islice(crawl_products(products), 5):
 
             print(f"Downloaded product: {product_name}")
 
             # Parse product details from the product page using BeautifulSoup. (product_details_parser.py)
             product = parse_product_details(product_html)
-            print(product)
+        print("\nProduct Details")
+        print("-" * 50)
+
+        for field, value in product.items():
+            print(f"{field:<15}: {value}")
+
+        print("-" * 50)
+
 
 if __name__ == "__main__":
     main()
