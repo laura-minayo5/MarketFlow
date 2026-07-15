@@ -6,11 +6,11 @@
 # Work: download the product pages using URLs from the dictionary, save it locally.
 # Output: yield (name, html) for the next stage.  
 
-# Dict product names → URLs
+# Dict product names → URLs from product_parser.py
 #       ↓ 
-# Download Product Page
+# Download Product Page using the URLs
 #       ↓
-# Save HTML Locally
+# Save products HTML Locally
 #       ↓
 # Pass (name, html) to the next stage
 

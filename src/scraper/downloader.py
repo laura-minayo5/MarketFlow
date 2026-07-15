@@ -31,10 +31,22 @@ def download_page(url: str) -> str:
     """Download a web page and return its HTML."""
 
     response = session.get(
-        url,
-        timeout=REQUEST_TIMEOUT,
+    url,
+    timeout=REQUEST_TIMEOUT,
     )
+
+    print(response.url)
+    print(response.status_code)
 
     response.raise_for_status()
 
     return response.text
+    
+    # response = session.get(
+    #     url,
+    #     timeout=REQUEST_TIMEOUT,
+    # )
+
+    # response.raise_for_status()
+
+    # return response.text

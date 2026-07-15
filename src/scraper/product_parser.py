@@ -5,7 +5,7 @@
 # Work: Extract product names and relative URLs from a Jumia category page using BeautifulSoup.
 # Output: a dictionary consisting of product names and their corresponding URLs.
 
-# Category HTML
+# Category HTML from category_crawler.py
 #       ↓
 # Extract Product Names and URLs
 #       ↓

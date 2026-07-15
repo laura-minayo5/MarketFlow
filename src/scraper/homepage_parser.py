@@ -1,6 +1,6 @@
 # Parser -> transforms HTML into structured data.
 
-# Input: HTML of the Jumia homepage.
+# Input: Jumia homepage HTML.
 # Work: Extract category names and relative URLs from the Jumia homepage using BeautifulSoup.
 # Output: a dictionary consisting of category names and their corresponding URLs.
 
@@ -11,6 +11,8 @@
 # Return a dictionary of category names and URLs
 
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from .config import BASE_URL
 
 
 def extract_category_urls(html: str) -> dict[str, str]:
@@ -31,7 +33,8 @@ def extract_category_urls(html: str) -> dict[str, str]:
 
         # Find the child <span> containing the category name.
         # Use find() (or select_one()) for child elements.
-        span = link.find("span.text")
+        # span = link.find("span", class_="text")
+        span = link.select_one("span.text")
 
         # Skip malformed links that are missing
         # either the URL or the category name.
@@ -40,6 +43,7 @@ def extract_category_urls(html: str) -> dict[str, str]:
 
         name = span.get_text(strip=True)
 
-        categories[name] = href
+        categories[name] = urljoin(BASE_URL, href)
+
 
     return categories

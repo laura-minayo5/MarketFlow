@@ -5,11 +5,11 @@
 # Work: download the category pages using URLs from the dictionary, save it locally.
 # Output: yield (name, html) for the next stage.  
 
-# Dict category names → URLs
+# Dict category names → URLs (from homepage_parser.py output)
 #       ↓
-# Download Category Page
+# Download Category Page using the URLs
 #       ↓
-# Save HTML Locally
+# Save categories HTMLs Locally
 #       ↓
 # Pass (name, html) to the next stage
 
