@@ -24,4 +24,5 @@ RAW_CATEGORIES = RAW_DATA / "categories"
 RAW_PRODUCTS = RAW_DATA / "products"
 
 PROCESSED_DATA = PROJECT_ROOT / "data" / "processed"
+PROCESSED_PRODUCTS = PROCESSED_DATA / "products.json"
 LOGS = PROJECT_ROOT / "data" / "logs"

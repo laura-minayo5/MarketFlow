@@ -14,58 +14,111 @@ from bs4 import BeautifulSoup
 import re
 from typing import Any
 
+
+def clean_text(text: str) -> str:
+    """
+    Normalize text extracted from HTML.
+
+    - Replace HTML non-breaking spaces (&nbsp;) with normal spaces.
+    - Collapse multiple whitespace characters into a single space.
+    - Remove leading and trailing whitespace.
+    """
+
+    return re.sub(
+        r"\s+",
+        " ",
+        text.replace("\xa0", " ")
+    ).strip()
+
 def get_text(soup: BeautifulSoup, selector: str) -> str | None:
     """
-    Return the text of the first element matching the CSS selector.
+    Return the cleaned text of the first element matching the CSS selector.
     Returns None if the element does not exist.
     """
 
     element = soup.select_one(selector)
 
-    if element:
-        return element.get_text(strip=True)
+    if not element:
+        return None
 
-    return None
+    return clean_text(element.get_text(" ", strip=True))
 
 
 def get_brand(soup: BeautifulSoup) -> str | None:
     """
     Extract the product brand.
-    The brand section looks like:
-    <div class="-pvxs">
-        Brand:
-        <a ...>EAGEAT</a>
+
+    HTML structure:
+
+    <div class="-phm">
+        <div class="-pvxs">
+            Brand:
+            <a class="_more">Vision Plus</a>
+        </div>
     </div>
-    Return only the brand name.
+    CSS selector:
+        div.-phm div.-pvxs a._more
+
+    This means:
+        div.-phm      -> product information section
+            div.-pvxs -> brand information block
+                a._more -> brand name link
     """
 
-    brand_section = soup.select_one("div.-pvxs")
+    # Select the brand link from the product information section.
+    brand = soup.select_one("div.-phm div.-pvxs a._more")
 
-    if not brand_section:
+    if not brand:
         return None
 
-    brand_link = brand_section.find("a")
-
-    if not brand_link:
-        return None
-
-    return brand_link.get_text(strip=True)
+    return clean_text(brand.get_text(" ", strip=True))
 
 def get_description(soup: BeautifulSoup) -> str | None:
     """
-    Extract the product description.
-    Returns all visible text from the Product Details section.
+    Extract the Product Details description.
+
+    The Product Details section has the structure:
+
+    <div class="card">
+        <div id="description"></div>
+        <header>
+            <h2>Product details</h2>
+        </header>
+        <div class="markup">...</div>
+    </div>
+
+    We first locate the unique description anchor, then find the
+    surrounding card, and finally extract the text from the markup
+    inside that card.
     """
 
-    description_section = soup.select_one("div.markup")
+    # Find the unique Product Details anchor.
+    description_anchor = soup.select_one("div#description")
 
-    if not description_section:
+    if not description_anchor:
         return None
 
-    # using stripped_strings collects all the visible text while automatically ignoring empty tags and images.
-    parts = list(description_section.stripped_strings)
+    # Move to the surrounding card.
+    card = description_anchor.find_parent("div", class_="card")
 
-    return " ".join(parts) if parts else None
+    if not card:
+        return None
+
+    # Find the markup that belongs only to Product Details.
+    markup = card.select_one("div.markup")
+
+    if not markup:
+        return None
+    
+    descriptive_parts = []
+    
+    for element in markup.find_all(["p", "li"]):
+        text = clean_text(element.get_text(" ", strip=True))
+        if text:
+            descriptive_parts.append(text)
+
+    # Return the joined parts or None if no parts exist.
+    return "\n\n".join(descriptive_parts) if descriptive_parts else None
 
 
 def parse_markup(markup: BeautifulSoup) -> dict | list | str | None:
@@ -83,11 +136,11 @@ def parse_markup(markup: BeautifulSoup) -> dict | list | str | None:
 
     # No list items -> just return the text.
     if not items:
-        text = " ".join(markup.stripped_strings)
+        text = clean_text(" ".join(markup.stripped_strings))
         return text if text else None
 
-    data_dict = {}
-    data_list = []
+    specifications = {}
+    features = []
 
     for item in items:
 
@@ -95,37 +148,41 @@ def parse_markup(markup: BeautifulSoup) -> dict | list | str | None:
 
         # Case 1: key-value pair.
         if strong:
+            key = clean_text(strong.get_text()).rstrip(":")
 
-            key = strong.get_text(strip=True).rstrip(":")
+            text = clean_text(item.get_text(" ", strip=True))
 
-            text = item.get_text(" ", strip=True)
+            value = text.replace(key, "").strip()
 
-            value = text.replace(strong.get_text(strip=True), "").strip()
-
-            data_dict[key] = value
+            specifications[key] = value
 
         # Case 2: plain list item.
         else:
 
-            data_list.append(item.get_text(" ", strip=True))
+            features.append(clean_text(item.get_text(" ", strip=True)))
 
-    if data_dict:
-        return data_dict
+    if specifications:
+        return specifications
 
-    return data_list
+    return features
 
 
-def get_product_sections(soup: BeautifulSoup) -> dict[str, dict | list | str]:
+def get_product_sections(soup: BeautifulSoup) -> dict[str, dict | list | str | None]:
     """
-    Extract all structured product sections.
+    Extract all structured product information sections.
+
+    Each section consists of a heading and its corresponding content,
+    which is parsed by `parse_markup()`.
 
     Examples:
         - Key Features
         - Specifications
         - What's in the box
         - Warranty
-    """
 
+    Returns:
+        A dictionary mapping each section title to its parsed content.
+    """
     sections = {}
 
     for article in soup.select("section article.col8"):
@@ -137,7 +194,7 @@ def get_product_sections(soup: BeautifulSoup) -> dict[str, dict | list | str]:
         if not heading or not markup:
             continue
 
-        title = heading.get_text(strip=True)
+        title = clean_text(heading.get_text(strip=True))
 
         sections[title] = parse_markup(markup)
 
@@ -145,10 +202,14 @@ def get_product_sections(soup: BeautifulSoup) -> dict[str, dict | list | str]:
 
 def get_breadcrumbs(soup: BeautifulSoup) -> list[str]:
     """
-    Extract the breadcrumb trail.
+    Extract the breadcrumb navigation trail.
 
     Example:
-    Home > Computing > Laptops > Business Laptops > HP EliteBook
+        Home > Computing > Laptops > Business Laptops > HP EliteBook
+
+    Returns:
+        A list of breadcrumb labels in order from the homepage
+        to the current product.
     """
 
     container = soup.select_one("div.brcbs")
@@ -162,7 +223,7 @@ def get_breadcrumbs(soup: BeautifulSoup) -> list[str]:
     # so select both (a.cbs, span.cbs) or use a common class (cbs)
     for crumb in container.select(".cbs"):
 
-        text = crumb.get_text(strip=True)
+        text = clean_text(crumb.get_text(" ", strip=True))
 
         if text:
             breadcrumbs.append(text)
@@ -171,55 +232,70 @@ def get_breadcrumbs(soup: BeautifulSoup) -> list[str]:
 
 def get_seller(soup: BeautifulSoup) -> str | None:
     """
-    Extract the seller name.
+    Extract the seller name from the seller information section.
+
+    Returns:
+        The seller name, or None if the product has no seller information.
     """
 
     seller = soup.select_one("div.-hr.-pam > p.-m.-pbm")
 
-    if seller:
-        return seller.get_text(strip=True)
+    if not seller:
+        return None
 
-    return None
+    return clean_text(seller.get_text(" ", strip=True))
 
 def get_seller_performance(soup: BeautifulSoup) -> dict[str, str]:
     """
-    Extract seller performance metrics.
-    """
+    Extract the seller performance metrics.
+    HTML structure:
+    <div class="-df -i-ctr -ptm">
+        <p>
+            Shipping speed:
+            <span class="-m">Excellent</span>
+        </p>
+    </div>
 
+    Returns a dictionary such as:
+    {
+        "Shipping speed": "Excellent",
+        "Quality Score": "Excellent",
+        "Customer Rating": "Good",
+        "Cancellation Rate": "Excellent"
+    }
+    """
     performance = {}
 
-    section = soup.find("h3", string="Seller Performance")
-
-    if not section:
-        return performance
-
-    container = section.find_parent("div")
-
-    if not container:
-        return performance
-
-    for row in container.select("div.-df.-i-ctr.-ptm"):
+    # Each seller performance metric is stored in its own row.
+    for row in soup.select("div.-df.-i-ctr.-ptm"):
 
         p = row.find("p")
-
         if not p:
             continue
 
-        span = p.find("span")
-
-        if not span:
+        value = p.find("span")
+        if not value:
             continue
 
-        metric = p.get_text(" ", strip=True).replace(span.get_text(strip=True), "").replace(":", "").strip()
+        value_text = clean_text(value.get_text())
 
-        performance[metric] = span.get_text(strip=True)
+        metric = clean_text(
+            p.get_text(" ", strip=True)
+            .replace(value.get_text(strip=True), "")
+            .replace(":", "")
+            .strip()
+        )
+
+        performance[metric] = value_text
 
     return performance
 
 def get_reviews(soup: BeautifulSoup) -> str | None:
     """
-    Extract the number of verified ratings.
-    Returns only the numeric value.
+    Extract the number of product ratings.
+
+    Returns:
+        The numeric rating count as a string, or None if unavailable.
     """
 
     reviews = get_text(soup, "a.-plxs._more")
@@ -229,10 +305,10 @@ def get_reviews(soup: BeautifulSoup) -> str | None:
 
     match = re.search(r"\d+", reviews)
 
-    if match:
-        return match.group()
+    if not match:
+        return None
 
-    return None
+    return match.group()
 
 def get_rating(soup: BeautifulSoup) -> str | None:
     rating = get_text(soup, "div.stars")
@@ -240,12 +316,19 @@ def get_rating(soup: BeautifulSoup) -> str | None:
     if not rating:
         return None
 
-    return rating.split()[0]
+    rating_value = rating.split()[0]
+    return rating_value
 
 
-def parse_product_details(html: str,) -> dict[str, Any]:
+def parse_product_details(html: str) -> dict[str, Any]:
     """
     Extract structured product information from a Jumia product page.
+
+    Args:
+        html: HTML content of a product page.
+
+    Returns:
+        A dictionary containing the extracted product information.
     """
 
     soup = BeautifulSoup(html, "lxml")

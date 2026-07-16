@@ -1,4 +1,4 @@
-from .config import HOME_PAGE, RAW_HOME
+from .config import HOME_PAGE, RAW_HOME, PROCESSED_PRODUCTS
 from .downloader import download_page
 from .homepage_parser import extract_category_urls
 from .category_crawler import crawl_categories
@@ -6,7 +6,21 @@ from .product_parser import extract_product_urls
 from .product_crawler import crawl_products
 from .product_details_parser import parse_product_details
 from itertools import islice
+from pathlib import Path
+import json
 
+def save_products(products: list[dict], output_path: Path) -> None:
+    """Save parsed products to a JSON file."""
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(
+            products,
+            f,
+            indent=4,
+            ensure_ascii=False,
+        )
 
 def main():
     """Run the complete MarketFlow scraping pipeline."""
@@ -47,17 +61,24 @@ def main():
         # products = dict(list(products.items())[:5]) # for testing so that we only download 5 products
 
         print(f"Found {len(products)} products")
-       
+
         # 5. product_crawler uses the Product URLs to download each product page html.
         # it yields (product_name, product_html) for the next stage.
         # Download first 5 items in generator for testing
+
+        parsed_products = [] # List to hold parsed product details
+        
         for product_name, product_html in islice(crawl_products(products), 5):
+
 
             print(f"\nDownloaded product: {product_name}")
 
             # 6. product_details_parser reads each product page HTML and extracts:
             # (Product name, price, old price, discount, rating, reviews) using BeautifulSoup.
             product = parse_product_details(product_html)
+
+            # Append the parsed product details to the list of parsed products.
+            parsed_products.append(product)
 
             # 7. Output the product details to the console.
             print("\nProduct Details")
@@ -69,6 +90,9 @@ def main():
 
             print("-" * 60)
 
+    save_products(parsed_products, PROCESSED_PRODUCTS)
+
+    print(f"\nSaved {len(parsed_products)} products to {PROCESSED_PRODUCTS}")
 
 if __name__ == "__main__":
     main()
