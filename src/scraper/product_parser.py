@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from .config import BASE_URL
+from config.paths import BASE_URL
 
 
 def extract_product_urls(html: str) -> dict[str, str]:

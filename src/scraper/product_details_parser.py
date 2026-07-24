@@ -205,11 +205,11 @@ def get_breadcrumbs(soup: BeautifulSoup) -> list[str]:
     Extract the breadcrumb navigation trail.
 
     Example:
-        Home > Computing > Laptops > Business Laptops > HP EliteBook
+        Home > Computing > Laptops > Business Laptops
 
     Returns:
-        A list of breadcrumb labels in order from the homepage
-        to the current product.
+        A list of category breadcrumb labels in order from the
+        homepage to the product's category.
     """
 
     container = soup.select_one("div.brcbs")
@@ -219,9 +219,10 @@ def get_breadcrumbs(soup: BeautifulSoup) -> list[str]:
 
     breadcrumbs = []
 
-    # Both <a> and <span> are breadcrumb items, 
-    # so select both (a.cbs, span.cbs) or use a common class (cbs)
-    for crumb in container.select(".cbs"):
+    # Category breadcrumbs are stored in <a class="cbs"> elements.
+    # The product name is stored separately in a <span class="cbs">,
+    # so selecting only anchor tags excludes the product name.
+    for crumb in container.select("a.cbs"):
 
         text = clean_text(crumb.get_text(" ", strip=True))
 

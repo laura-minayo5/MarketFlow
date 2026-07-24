@@ -16,7 +16,7 @@
 
 import time
 from requests.exceptions import RequestException
-from .config import RAW_PRODUCTS, REQUEST_DELAY
+from config.paths import RAW_PRODUCTS, REQUEST_DELAY
 from .downloader import download_page
 
 def crawl_products(products: dict[str, str]) -> None:

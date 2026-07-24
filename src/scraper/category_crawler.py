@@ -17,7 +17,7 @@ import time
 
 from requests.exceptions import RequestException
 
-from .config import RAW_CATEGORIES, REQUEST_DELAY
+from config.paths import RAW_CATEGORIES, REQUEST_DELAY
 from .downloader import download_page
 
 

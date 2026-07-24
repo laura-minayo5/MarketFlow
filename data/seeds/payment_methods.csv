@@ -1,0 +1,7 @@
+payment_method_id,payment_method
+PM001,M-Pesa
+PM002,Debit Card
+PM003,Credit Card
+PM004,Airtel Money
+PM005,Cash on Delivery
+PM006,Bank Transfer

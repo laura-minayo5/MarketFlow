@@ -12,7 +12,7 @@
 
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from .config import BASE_URL
+from config.paths import BASE_URL
 
 
 def extract_category_urls(html: str) -> dict[str, str]:

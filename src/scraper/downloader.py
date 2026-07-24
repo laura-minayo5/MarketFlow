@@ -4,7 +4,7 @@
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from .config import HEADERS, MAX_RETRIES, REQUEST_TIMEOUT
+from config.paths import HEADERS, MAX_RETRIES, REQUEST_TIMEOUT
 
 # Set up a retry strategy for handling transient errors and rate limiting.
 # The retry strategy specifies the total number of retries, a backoff factor for exponential backoff,

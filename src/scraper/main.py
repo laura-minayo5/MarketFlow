@@ -1,26 +1,22 @@
-from .config import HOME_PAGE, RAW_HOME, PROCESSED_PRODUCTS
+from config.paths import HOME_PAGE, RAW_HOME
 from .downloader import download_page
 from .homepage_parser import extract_category_urls
 from .category_crawler import crawl_categories
 from .product_parser import extract_product_urls
 from .product_crawler import crawl_products
 from .product_details_parser import parse_product_details
+from enrichment.pipeline import (
+    build_product_tables,
+    build_customer_tables,
+    build_transaction_tables,
+    )
+from utils.io import (
+    get_tables,
+    save_all_tables,
+    print_all_summaries,
+    )
 from itertools import islice
-from pathlib import Path
-import json
 
-def save_products(products: list[dict], output_path: Path) -> None:
-    """Save parsed products to a JSON file."""
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(
-            products,
-            f,
-            indent=4,
-            ensure_ascii=False,
-        )
 
 def main():
     """Run the complete MarketFlow scraping pipeline."""
@@ -39,19 +35,24 @@ def main():
 
     # 2. homepage_parser reads homepage.html and extracts:
     # Extract Category names + Category URLs using BeautifulSoup.
-    categories = extract_category_urls(homepage_html)
+    category_urls = extract_category_urls(homepage_html)
 
-    print(f"\nFound {len(categories)} categories:\n")
+    print(f"\nFound {len(category_urls)} categories:\n")
 
     # Print the discovered categories and their URLs in a formatted manner.
-    for name, url in categories.items():
+    for name, url in category_urls.items():
         print(f"{name:<25} -> {url}")
 
     print("\nStarting scraping pipeline...\n")
 
+
+    # List to hold parsed product details.
+    parsed_products: list[dict] = [] 
+  
+
     # 3. category_crawler uses the Category URLs to download each category page html.
     # it yields (category_name, category_html) for the next stage.
-    for category_name, category_html in islice(crawl_categories(categories), 1):  # Limit to the first category for testing
+    for category_name, category_html in islice(crawl_categories(category_urls), 1):  # Limit to the first category for testing
 
         print(f"\nParsing category: {category_name}")
 
@@ -65,8 +66,6 @@ def main():
         # 5. product_crawler uses the Product URLs to download each product page html.
         # it yields (product_name, product_html) for the next stage.
         # Download first 5 items in generator for testing
-
-        parsed_products = [] # List to hold parsed product details
         
         for product_name, product_html in islice(crawl_products(products), 5):
 
@@ -75,24 +74,48 @@ def main():
 
             # 6. product_details_parser reads each product page HTML and extracts:
             # (Product name, price, old price, discount, rating, reviews) using BeautifulSoup.
-            product = parse_product_details(product_html)
+            raw_product = parse_product_details(product_html)
 
-            # Append the parsed product details to the list of parsed products.
-            parsed_products.append(product)
+            # store raw product details in a list for later saving to a JSON file.
+            parsed_products.append(raw_product)
 
             # 7. Output the product details to the console.
-            print("\nProduct Details")
+            print(f"Parsed: {raw_product['product_name']}")
             print("-" * 60)
 
-            # Print the product details in a formatted manner.
-            for field, value in product.items():
+            # Print the parsed product details in a formatted manner.
+            for field, value in raw_product.items():
                 print(f"{field:<15}: {value}")
 
             print("-" * 60)
+            # print(f"[{len(parsed_products)}] Parsed: " f"{raw_product['product_name']}")
 
-    save_products(parsed_products, PROCESSED_PRODUCTS)
+    # Build product-related tables.
+    product_tables = build_product_tables(parsed_products)
 
-    print(f"\nSaved {len(parsed_products)} products to {PROCESSED_PRODUCTS}")
+    # Build customer-related tables.
+    customer_tables = build_customer_tables(100)
+
+    # Build transaction-related tables.
+    transaction_tables = build_transaction_tables(
+        customer_tables["customers"],
+        customer_tables["addresses"],
+        product_tables["products"],
+        )
+    
+    # Get all tables together with their filenames.
+    tables = get_tables(
+        parsed_products,
+        product_tables,
+        customer_tables,
+        transaction_tables,
+        )
+        
+    # Save all tables to JSON files.    
+    save_all_tables(tables)
+
+    print_all_summaries(tables)
+
 
 if __name__ == "__main__":
     main()
